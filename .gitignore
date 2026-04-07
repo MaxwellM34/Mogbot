@@ -1,6 +1,51 @@
-node_modules/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
 dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+webapp/dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Workspace (agent working directory)
 workspace/*
 !workspace/.gitkeep
-.env
+
+# Logs
 *.log
+
+# Database
+pgdata/
+
+# Old TypeScript build output
+dist/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Docker
+.docker/
