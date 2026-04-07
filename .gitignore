@@ -14,10 +14,9 @@ env/
 node_modules/
 webapp/dist/
 
-# Environment
-.env
+# Environment (keep .env selector and .example files tracked)
 .env.local
-.env.*.local
+.env.cloud
 
 # IDE
 .vscode/
@@ -39,9 +38,6 @@ workspace/*
 
 # Database
 pgdata/
-
-# Old TypeScript build output
-dist/
 
 # Playwright
 playwright-report/

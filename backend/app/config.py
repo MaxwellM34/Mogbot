@@ -1,9 +1,14 @@
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Resolve .env from the project root (one level above backend/)
-_env_file = Path(__file__).resolve().parents[2] / ".env"
+# Resolve env file from project root based on ENV variable.
+# ENV=local  -> .env.local  (default)
+# ENV=cloud  -> .env.cloud
+_project_root = Path(__file__).resolve().parents[2]
+_env_name = os.getenv("ENV", "local").strip().lower()
+_env_file = _project_root / f".env.{_env_name}"
 
 
 class Settings(BaseSettings):

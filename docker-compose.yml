@@ -19,10 +19,11 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    env_file:
+      - .env.${ENV:-local}
     environment:
+      - ENV=${ENV:-local}
       - DATABASE_URL=postgresql://mogbot:mogbot@db:5432/mogbot
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - WORKSPACE_DIR=/app/workspace
     volumes:
       - workspace:/app/workspace
     depends_on:
