@@ -18,8 +18,20 @@ const workdir = path.resolve("./workspace");
 
 wss.on("connection", (ws) => {
   ws.on("message", async (data) => {
-    const { task } = JSON.parse(data.toString());
+    const { task, budgetCAD } = JSON.parse(data.toString());
+
+    if (!budgetCAD || budgetCAD <= 0) {
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          data: "Set a budget (CAD $) before running a task."
+        })
+      );
+      return;
+    }
+
     const mogbot = new Orchestrator(process.env.ANTHROPIC_API_KEY!, workdir);
+    mogbot.setBudgetCAD(budgetCAD);
 
     const origLog = console.log;
     console.log = (...args: any[]) => {
@@ -30,6 +42,12 @@ wss.on("connection", (ws) => {
     try {
       const result = await mogbot.run(task);
       ws.send(JSON.stringify({ type: "result", data: result }));
+      ws.send(
+        JSON.stringify({
+          type: "budget",
+          data: mogbot.getBudget().summary()
+        })
+      );
     } catch (err: any) {
       ws.send(JSON.stringify({ type: "error", data: err.message }));
     }

@@ -1,4 +1,5 @@
 import { Orchestrator } from "./core/orchestrator";
+import { BudgetTracker } from "./core/budget";
 import * as path from "path";
 import * as readline from "readline";
 
@@ -14,15 +15,21 @@ const mogbot = new Orchestrator(API_KEY, workdir);
 async function main() {
   const args = process.argv.slice(2);
 
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
   if (args.length > 0) {
+    // Single task mode — still ask for budget
+    const budget = await BudgetTracker.promptBudget(rl);
+    mogbot.setBudgetCAD(budget);
     const result = await mogbot.run(args.join(" "));
     console.log("\nResult:", result);
+    console.log(`\nFinal spend: ${mogbot.getBudget().summary()}`);
+    rl.close();
   } else {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
+    // Interactive mode
     console.log(
       "Mogbot locked in. Drop a task or type 'quit' to ascend out.\n"
     );
@@ -34,8 +41,11 @@ async function main() {
           process.exit(0);
         }
         try {
+          const budget = await BudgetTracker.promptBudget(rl);
+          mogbot.setBudgetCAD(budget);
           const result = await mogbot.run(task);
           console.log("\nResult:", result);
+          console.log(`\nFinal spend: ${mogbot.getBudget().summary()}`);
         } catch (err: any) {
           console.error("Error:", err.message);
         }
