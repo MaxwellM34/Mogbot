@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import json
+
+
+class BudgetExceededError(Exception):
+    """Raised when the task exceeds its CAD budget."""
+    pass
 import logging
 from typing import Any, Callable
 
@@ -92,7 +97,7 @@ class Orchestrator:
                 logger.warning(msg)
                 await self._emit("log", msg)
                 await self.cleanup()
-                return msg
+                raise BudgetExceededError(msg)
 
             await self._emit("log", f"-- Step {step + 1} --")
 
@@ -175,12 +180,22 @@ class Orchestrator:
 
                     result = await self._execute_tool(block.name, tool_input)
 
-                    # Screenshot: return as image content block
+                    # Stream browser frame after any browser action
+                    if block.name.startswith("browser_") and block.name != "browser_screenshot":
+                        try:
+                            frame = await self.browser.screenshot(full_page=False)
+                            if frame and len(frame) > 100:
+                                await self._emit("browser_frame", {"image": frame})
+                        except Exception:
+                            pass
+
+                    # Screenshot: return as image content block + stream to frontend
                     if (
                         block.name == "browser_screenshot"
                         and isinstance(result, str)
                         and len(result) > 1000
                     ):
+                        await self._emit("browser_frame", {"image": result})
                         tool_results.append(
                             {
                                 "type": "tool_result",

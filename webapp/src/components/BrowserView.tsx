@@ -3,6 +3,7 @@ import { useRef, useState, useCallback, useEffect, type FormEvent, type Keyboard
 interface BrowserViewProps {
   frame: string | null;
   streaming: boolean;
+  interactive: boolean;
   onClose: () => void;
   onBrowserClick: (x: number, y: number) => void;
   onBrowserType: (text: string) => void;
@@ -15,6 +16,7 @@ const VIEWPORT_HEIGHT = 900;
 export default function BrowserView({
   frame,
   streaming,
+  interactive,
   onClose,
   onBrowserClick,
   onBrowserType,
@@ -26,6 +28,7 @@ export default function BrowserView({
 
   const handleImageClick = useCallback(
     (e: MouseEvent<HTMLImageElement>) => {
+      if (!interactive) return;
       const img = imgRef.current;
       if (!img) return;
 
@@ -35,7 +38,7 @@ export default function BrowserView({
 
       onBrowserClick(x, y);
     },
-    [onBrowserClick]
+    [interactive, onBrowserClick]
   );
 
   const handleTypingSubmit = useCallback(
@@ -50,7 +53,6 @@ export default function BrowserView({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      // Forward special keys to the browser
       if (e.key === "Tab") {
         e.preventDefault();
         onBrowserKey("Tab");
@@ -58,35 +60,34 @@ export default function BrowserView({
         e.preventDefault();
         onBrowserKey("Escape");
       }
-      // Enter is handled by form submit
     },
     [onBrowserKey]
   );
 
-  // Focus the input when streaming starts
   useEffect(() => {
-    if (streaming) {
+    if (interactive) {
       inputRef.current?.focus();
     }
-  }, [streaming]);
+  }, [interactive]);
 
-  if (!streaming) return null;
+  if (!streaming || !frame) return null;
 
-  return (
-    <div className="browser-view-overlay">
-      <div className="browser-view-modal">
-        <div className="browser-view-header">
-          <div className="browser-view-title">
-            <span className="browser-view-live-dot" />
-            Browser View — Click to interact
+  // Interactive mode: full-screen modal for CAPTCHA/login/2fa
+  if (interactive) {
+    return (
+      <div className="browser-view-overlay">
+        <div className="browser-view-modal">
+          <div className="browser-view-header">
+            <div className="browser-view-title">
+              <span className="browser-view-live-dot" />
+              Browser View — Click to interact
+            </div>
+            <button className="browser-view-done-btn" onClick={onClose}>
+              Done
+            </button>
           </div>
-          <button className="browser-view-done-btn" onClick={onClose}>
-            Done
-          </button>
-        </div>
 
-        <div className="browser-view-content">
-          {frame ? (
+          <div className="browser-view-content">
             <img
               ref={imgRef}
               className="browser-view-screenshot"
@@ -95,34 +96,46 @@ export default function BrowserView({
               onClick={handleImageClick}
               draggable={false}
             />
-          ) : (
-            <div className="browser-view-loading">
-              Waiting for browser screenshot...
-            </div>
-          )}
-        </div>
+          </div>
 
-        <div className="browser-view-controls">
-          <form className="browser-view-type-form" onSubmit={handleTypingSubmit}>
-            <input
-              ref={inputRef}
-              type="text"
-              className="browser-view-type-input"
-              placeholder="Type text and press Enter to send to browser (Tab/Escape also forwarded)..."
-              value={typingText}
-              onChange={(e) => setTypingText(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <button
-              type="submit"
-              className="browser-view-send-btn"
-              disabled={!typingText.trim()}
-            >
-              Send
-            </button>
-          </form>
+          <div className="browser-view-controls">
+            <form className="browser-view-type-form" onSubmit={handleTypingSubmit}>
+              <input
+                ref={inputRef}
+                type="text"
+                className="browser-view-type-input"
+                placeholder="Type text and press Enter to send to browser..."
+                value={typingText}
+                onChange={(e) => setTypingText(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              <button
+                type="submit"
+                className="browser-view-send-btn"
+                disabled={!typingText.trim()}
+              >
+                Send
+              </button>
+            </form>
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // Passive mode: inline panel showing what the browser is doing
+  return (
+    <div className="browser-view-panel">
+      <div className="browser-view-panel-header">
+        <span className="browser-view-live-dot" />
+        <span>Browser</span>
+      </div>
+      <img
+        className="browser-view-panel-screenshot"
+        src={`data:image/jpeg;base64,${frame}`}
+        alt="Browser view"
+        draggable={false}
+      />
     </div>
   );
 }

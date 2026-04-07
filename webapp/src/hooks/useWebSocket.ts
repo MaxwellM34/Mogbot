@@ -197,6 +197,7 @@ export function useWebSocket(): UseWebSocketReturn {
           const image = typeof frameData.image === "string" ? frameData.image : null;
           if (image) {
             setBrowserFrame(image);
+            setBrowserStreaming(true);
           }
           break;
         }

@@ -101,6 +101,7 @@ export default function App() {
       <BrowserView
         frame={browserFrame}
         streaming={browserStreaming}
+        interactive={humanNeeded != null && ["captcha", "login", "2fa"].includes(humanNeeded.ask_type ?? "")}
         onClose={handleBrowserDone}
         onBrowserClick={sendBrowserClick}
         onBrowserType={sendBrowserType}

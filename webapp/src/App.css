@@ -926,6 +926,38 @@
   padding: 4px 0;
 }
 
+/* ===== Browser View Panel (passive / watch mode) ===== */
+.browser-view-panel {
+  border-top: 1px solid #21262d;
+  background-color: #0d1117;
+  flex-shrink: 0;
+  max-height: 45vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.browser-view-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 24px;
+  background-color: #161b22;
+  border-bottom: 1px solid #21262d;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7d8590;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.browser-view-panel-screenshot {
+  width: 100%;
+  max-height: 40vh;
+  object-fit: contain;
+  background-color: #000;
+}
+
 @media (max-width: 768px) {
   .browser-view-modal {
     width: 100vw;
@@ -945,5 +977,9 @@
 
   .browser-view-send-btn {
     width: 100%;
+  }
+
+  .browser-view-panel {
+    max-height: 35vh;
   }
 }

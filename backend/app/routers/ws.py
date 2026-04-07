@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.config import settings
+from app.core.orchestrator import BudgetExceededError
 from app.database import get_pool
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,36 @@ async def run_task(websocket: WebSocket) -> None:
 
             # 9. Send final result + budget summary to the client
             await websocket.send_json({"type": "result", "data": result})
+            await websocket.send_json(
+                {
+                    "type": "budget",
+                    "data": {
+                        "spent": budget.get_spent_cad(),
+                        "total": budget.budget_cad,
+                        "input_tokens": budget.input_tokens,
+                        "output_tokens": budget.output_tokens,
+                    },
+                }
+            )
+
+        except BudgetExceededError as exc:
+            budget = orch.get_budget()
+            await pool.execute(
+                """UPDATE tasks
+                   SET status = 'budget_exceeded',
+                       result = $1,
+                       spent_cad = $2,
+                       input_tokens = $3,
+                       output_tokens = $4,
+                       finished_at = now()
+                   WHERE id = $5""",
+                str(exc),
+                round(budget.get_spent_cad(), 4),
+                budget.input_tokens,
+                budget.output_tokens,
+                task_id,
+            )
+            await websocket.send_json({"type": "error", "data": str(exc)})
             await websocket.send_json(
                 {
                     "type": "budget",
