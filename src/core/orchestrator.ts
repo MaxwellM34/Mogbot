@@ -4,6 +4,7 @@ import { BrowserTool } from "../tools/browser";
 import { SimpleCodeExecutor } from "../tools/code-exec";
 import { FileTool } from "../tools/files";
 import { HumanInteraction } from "../tools/human";
+import { BudgetTracker } from "./budget";
 
 const SYSTEM_PROMPT = `You are Mogbot — an autonomous AI agent that mogs every task it touches. Your name comes from "mog" (to dominate, outshine, be superior to). You accomplish tasks by using your tools: browsing the web, executing code, managing files, and asking the human for help when needed.
 
@@ -24,8 +25,10 @@ export class Orchestrator {
   private codeExec: SimpleCodeExecutor;
   private files: FileTool;
   private human: HumanInteraction;
+  private budget: BudgetTracker;
   private messages: Anthropic.MessageParam[] = [];
   private maxIterations = 50;
+  private model = "claude-sonnet-4-20250514";
 
   constructor(apiKey: string, workdir: string) {
     this.client = new Anthropic({ apiKey });
@@ -33,6 +36,15 @@ export class Orchestrator {
     this.codeExec = new SimpleCodeExecutor(workdir);
     this.files = new FileTool(workdir);
     this.human = new HumanInteraction();
+    this.budget = new BudgetTracker();
+  }
+
+  setBudgetCAD(amount: number) {
+    this.budget.setBudgetCAD(amount);
+  }
+
+  getBudget(): BudgetTracker {
+    return this.budget;
   }
 
   async run(task: string): Promise<string> {
@@ -40,16 +52,39 @@ export class Orchestrator {
 
     this.messages = [{ role: "user", content: task }];
 
+    this.budget.reset();
+    console.log(`Budget: $${this.budget.getBudgetCAD().toFixed(2)} CAD\n`);
+
     for (let i = 0; i < this.maxIterations; i++) {
+      // -- Budget gate: check before every API call --
+      if (!this.budget.canAfford()) {
+        console.log(
+          `\nBudget exceeded! ${this.budget.summary()}`
+        );
+        console.log("Stopping task to avoid overspending.");
+        await this.cleanup();
+        return `Task stopped — budget of $${this.budget.getBudgetCAD().toFixed(2)} CAD reached. ${this.budget.summary()}`;
+      }
+
       console.log(`\n-- Step ${i + 1} --`);
 
       const response = await this.client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: this.model,
         max_tokens: 4096,
         system: SYSTEM_PROMPT,
         tools: TOOLS as Anthropic.Tool[],
         messages: this.messages
       });
+
+      // -- Track token spend --
+      const usage = this.budget.recordUsage(
+        this.model,
+        response.usage.input_tokens,
+        response.usage.output_tokens
+      );
+      console.log(
+        `[cost] This call: $${usage.callCostCAD.toFixed(4)} CAD | ${this.budget.summary()}`
+      );
 
       for (const block of response.content) {
         if (block.type === "text" && block.text) {
