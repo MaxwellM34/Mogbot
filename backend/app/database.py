@@ -1,6 +1,10 @@
+import logging
+
 import asyncpg
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 pool: asyncpg.Pool | None = None
 
@@ -8,7 +12,12 @@ pool: asyncpg.Pool | None = None
 async def init_db() -> None:
     """Create the asyncpg connection pool."""
     global pool
-    pool = await asyncpg.create_pool(dsn=settings.database_url)
+    try:
+        pool = await asyncpg.create_pool(dsn=settings.database_url)
+        logger.info("Database connected")
+    except (OSError, asyncpg.PostgresError) as exc:
+        logger.warning("Could not connect to database: %s — running without persistence", exc)
+        pool = None
 
 
 async def close_db() -> None:
@@ -28,6 +37,9 @@ async def get_pool() -> asyncpg.Pool:
 
 async def init_tables() -> None:
     """Create tables if they don't already exist (bootstrap without alembic)."""
+    if pool is None:
+        logger.info("Skipping table init — no database connection")
+        return
     p = await get_pool()
     async with p.acquire() as conn:
         await conn.execute("""

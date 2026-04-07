@@ -154,6 +154,28 @@ class BrowserTool:
         await page.go_back()
         return {"navigated": "back"}
 
+    async def click_at(self, x: int, y: int) -> dict[str, Any]:
+        """Click at exact pixel coordinates (for human remote interaction)."""
+        if self._page is None:
+            return {"error": "No browser page open"}
+        await self._page.mouse.click(x, y)
+        await asyncio.sleep(500 / 1000)
+        return {"clicked_at": [x, y]}
+
+    async def type_keys(self, text: str) -> dict[str, str]:
+        """Type text via keyboard (for human remote interaction)."""
+        if self._page is None:
+            return {"error": "No browser page open"}
+        await self._page.keyboard.type(text)
+        return {"typed": text}
+
+    async def press_key(self, key: str) -> dict[str, str]:
+        """Press a single key like Enter, Tab, etc."""
+        if self._page is None:
+            return {"error": "No browser page open"}
+        await self._page.keyboard.press(key)
+        return {"pressed": key}
+
     async def close(self) -> None:
         """Shut down the browser and Playwright."""
         if self._browser:

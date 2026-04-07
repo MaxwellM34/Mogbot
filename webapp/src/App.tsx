@@ -4,6 +4,7 @@ import TaskInput from "./components/TaskInput";
 import LogStream from "./components/LogStream";
 import BudgetBar from "./components/BudgetBar";
 import TaskHistory from "./components/TaskHistory";
+import BrowserView from "./components/BrowserView";
 import "./App.css";
 
 export default function App() {
@@ -13,8 +14,13 @@ export default function App() {
     budgetInfo,
     isRunning,
     humanNeeded,
+    browserFrame,
+    browserStreaming,
     sendTask,
     sendHumanResponse,
+    sendBrowserClick,
+    sendBrowserType,
+    sendBrowserKey,
   } = useWebSocket();
 
   const [currentBudget, setCurrentBudget] = useState(0);
@@ -29,6 +35,10 @@ export default function App() {
     },
     [sendTask]
   );
+
+  const handleBrowserDone = useCallback(() => {
+    sendHumanResponse("done");
+  }, [sendHumanResponse]);
 
   // Refresh history when task completes
   useEffect(() => {
@@ -67,6 +77,7 @@ export default function App() {
             logs={logs}
             humanNeeded={humanNeeded}
             onHumanResponse={sendHumanResponse}
+            browserStreaming={browserStreaming}
           />
         </div>
 
@@ -86,6 +97,15 @@ export default function App() {
       >
         {sidebarOpen ? "\u2715" : "\u2630"}
       </button>
+
+      <BrowserView
+        frame={browserFrame}
+        streaming={browserStreaming}
+        onClose={handleBrowserDone}
+        onBrowserClick={sendBrowserClick}
+        onBrowserType={sendBrowserType}
+        onBrowserKey={sendBrowserKey}
+      />
     </div>
   );
 }

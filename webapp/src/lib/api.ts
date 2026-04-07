@@ -29,7 +29,7 @@ export async function fetchTasks(limit?: number): Promise<Task[]> {
     params.set("limit", String(limit));
   }
   const query = params.toString();
-  const url = `${API_BASE}/tasks${query ? `?${query}` : ""}`;
+  const url = `${API_BASE}/tasks/${query ? `?${query}` : ""}`;
 
   const response = await fetch(url);
   if (!response.ok) {

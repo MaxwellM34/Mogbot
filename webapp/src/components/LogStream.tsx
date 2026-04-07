@@ -5,6 +5,7 @@ interface LogStreamProps {
   logs: LogEntry[];
   humanNeeded: HumanRequest | null;
   onHumanResponse: (response: string) => void;
+  browserStreaming?: boolean;
 }
 
 function formatTime(date: Date): string {
@@ -35,19 +36,21 @@ function HumanNeededEntry({
   entry,
   humanNeeded,
   onHumanResponse,
+  browserStreaming,
 }: {
   entry: LogEntry;
   humanNeeded: HumanRequest | null;
   onHumanResponse: (response: string) => void;
+  browserStreaming?: boolean;
 }) {
   const [response, setResponse] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (humanNeeded) {
+    if (humanNeeded && !browserStreaming) {
       inputRef.current?.focus();
     }
-  }, [humanNeeded]);
+  }, [humanNeeded, browserStreaming]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -56,13 +59,23 @@ function HumanNeededEntry({
     setResponse("");
   }
 
+  // Determine if this is a visual interaction type (captcha/login/2fa)
+  const isVisualType =
+    humanNeeded?.ask_type &&
+    ["captcha", "login", "2fa"].includes(humanNeeded.ask_type);
+
   return (
     <div className={`log-entry type-${entry.type}`}>
       <div>
         <span className="timestamp">{formatTime(entry.timestamp)}</span>{" "}
         <span className="log-content">{entry.data}</span>
       </div>
-      {humanNeeded && (
+      {humanNeeded && isVisualType && browserStreaming && (
+        <div className="browser-view-hint">
+          Browser view opened — interact with the browser above and click Done when finished.
+        </div>
+      )}
+      {humanNeeded && (!isVisualType || !browserStreaming) && (
         <form className="human-response-form" onSubmit={handleSubmit}>
           <input
             ref={inputRef}
@@ -84,6 +97,7 @@ export default function LogStream({
   logs,
   humanNeeded,
   onHumanResponse,
+  browserStreaming,
 }: LogStreamProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -135,6 +149,7 @@ export default function LogStream({
               entry={entry}
               humanNeeded={isLastHumanNeeded ? humanNeeded : null}
               onHumanResponse={onHumanResponse}
+              browserStreaming={browserStreaming}
             />
           );
         }

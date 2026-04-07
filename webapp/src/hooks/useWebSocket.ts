@@ -27,6 +27,7 @@ export interface BudgetInfo {
 export interface HumanRequest {
   prompt: string;
   task_id: string;
+  ask_type?: string;
 }
 
 export interface UseWebSocketReturn {
@@ -37,8 +38,13 @@ export interface UseWebSocketReturn {
   isRunning: boolean;
   humanNeeded: HumanRequest | null;
   currentTaskId: string | null;
+  browserFrame: string | null;
+  browserStreaming: boolean;
   sendTask: (task: string, budgetCad: number, model?: string) => void;
   sendHumanResponse: (response: string) => void;
+  sendBrowserClick: (x: number, y: number) => void;
+  sendBrowserType: (text: string) => void;
+  sendBrowserKey: (key: string) => void;
   clearLogs: () => void;
 }
 
@@ -66,6 +72,8 @@ export function useWebSocket(): UseWebSocketReturn {
   const [isRunning, setIsRunning] = useState(false);
   const [humanNeeded, setHumanNeeded] = useState<HumanRequest | null>(null);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [browserFrame, setBrowserFrame] = useState<string | null>(null);
+  const [browserStreaming, setBrowserStreaming] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -172,11 +180,31 @@ export function useWebSocket(): UseWebSocketReturn {
         case "human_input_needed": {
           const hData = typeof msg.data === "object" && msg.data ? (msg.data as Record<string, unknown>) : {};
           const prompt = typeof hData.question === "string" ? hData.question : String(data);
+          const askType = typeof hData.type === "string" ? hData.type : "other";
           const taskId = currentTaskId ?? "";
-          setHumanNeeded({ prompt, task_id: taskId });
+          setHumanNeeded({ prompt, task_id: taskId, ask_type: askType });
           setLogs((prev) => [...prev, createLogEntry("human_needed", prompt)]);
+
+          // Start browser streaming for visual interaction types
+          if (["captcha", "login", "2fa"].includes(askType)) {
+            setBrowserStreaming(true);
+          }
           break;
         }
+
+        case "browser_frame": {
+          const frameData = typeof msg.data === "object" && msg.data ? (msg.data as Record<string, unknown>) : {};
+          const image = typeof frameData.image === "string" ? frameData.image : null;
+          if (image) {
+            setBrowserFrame(image);
+          }
+          break;
+        }
+
+        case "browser_stream_stop":
+          setBrowserStreaming(false);
+          setBrowserFrame(null);
+          break;
 
         case "assistant_text":
           setLogs((prev) => [...prev, createLogEntry("log", data)]);
@@ -212,6 +240,8 @@ export function useWebSocket(): UseWebSocketReturn {
       setHumanNeeded(null);
       setIsRunning(true);
       setLogs([]);
+      setBrowserFrame(null);
+      setBrowserStreaming(false);
 
       const payload: Record<string, unknown> = {
         type: "start",
@@ -237,10 +267,55 @@ export function useWebSocket(): UseWebSocketReturn {
       );
 
       setHumanNeeded(null);
+      setBrowserStreaming(false);
+      setBrowserFrame(null);
       setLogs((prev) => [
         ...prev,
         createLogEntry("log", `Human response: ${response}`),
       ]);
+    },
+    []
+  );
+
+  const sendBrowserClick = useCallback(
+    (x: number, y: number) => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+      wsRef.current.send(
+        JSON.stringify({
+          type: "browser_click",
+          x,
+          y,
+        })
+      );
+    },
+    []
+  );
+
+  const sendBrowserType = useCallback(
+    (text: string) => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+      wsRef.current.send(
+        JSON.stringify({
+          type: "browser_type",
+          text,
+        })
+      );
+    },
+    []
+  );
+
+  const sendBrowserKey = useCallback(
+    (key: string) => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+      wsRef.current.send(
+        JSON.stringify({
+          type: "browser_key",
+          key,
+        })
+      );
     },
     []
   );
@@ -251,6 +326,8 @@ export function useWebSocket(): UseWebSocketReturn {
     setBudgetInfo(null);
     setHumanNeeded(null);
     setCurrentTaskId(null);
+    setBrowserFrame(null);
+    setBrowserStreaming(false);
   }, []);
 
   useEffect(() => {
@@ -273,8 +350,13 @@ export function useWebSocket(): UseWebSocketReturn {
     isRunning,
     humanNeeded,
     currentTaskId,
+    browserFrame,
+    browserStreaming,
     sendTask,
     sendHumanResponse,
+    sendBrowserClick,
+    sendBrowserType,
+    sendBrowserKey,
     clearLogs,
   };
 }

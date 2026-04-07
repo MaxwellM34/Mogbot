@@ -119,6 +119,16 @@ async def run_task(websocket: WebSocket) -> None:
                     msg = await websocket.receive_json()
                     if msg.get("type") == "human_response":
                         orch.human.provide_response(msg.get("content", ""))
+                    elif msg.get("type") == "browser_click":
+                        x = msg.get("x", 0)
+                        y = msg.get("y", 0)
+                        await orch.browser.click_at(x, y)
+                    elif msg.get("type") == "browser_type":
+                        text = msg.get("text", "")
+                        await orch.browser.type_keys(text)
+                    elif msg.get("type") == "browser_key":
+                        key = msg.get("key", "")
+                        await orch.browser.press_key(key)
             except WebSocketDisconnect:
                 pass
             except Exception:

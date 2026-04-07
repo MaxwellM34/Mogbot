@@ -46,6 +46,7 @@ class Orchestrator:
         self.code_exec = CodeExecutor(workdir)
         self.files = FileTool(workdir)
         self.human = HumanInteraction()
+        self.human.set_browser(self.browser)
         self.budget = BudgetTracker()
         self.max_iterations: int = 50
         self.messages: list[dict[str, Any]] = []
@@ -116,7 +117,12 @@ class Orchestrator:
             )
             logger.info(cost_line)
             await self._emit("log", cost_line)
-            await self._emit("budget", self.budget.summary())
+            await self._emit("budget", {
+                "spent": self.budget.get_spent_cad(),
+                "total": self.budget.budget_cad,
+                "input_tokens": self.budget.input_tokens,
+                "output_tokens": self.budget.output_tokens,
+            })
 
             # Log any text blocks
             for block in response.content:

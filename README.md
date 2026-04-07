@@ -71,18 +71,22 @@ docker-compose up --build
 ### Local Development
 
 ```bash
-# Start PostgreSQL (via Docker or locally)
+# 1. Set up backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+playwright install chromium
+
+# 2. (Optional) Start PostgreSQL for task persistence
 docker run -d --name mogbot-db \
   -e POSTGRES_USER=mogbot -e POSTGRES_PASSWORD=mogbot -e POSTGRES_DB=mogbot \
   -p 5432:5432 postgres:16-alpine
 
-# Backend
-cd backend
-pip install -e .
-playwright install chromium
+# 3. Start backend (works without Postgres — just no persistence)
 uvicorn app.main:app --reload --port 8000
 
-# Frontend (separate terminal)
+# 4. Frontend (separate terminal)
 cd webapp
 npm install
 npm run dev

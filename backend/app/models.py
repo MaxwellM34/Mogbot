@@ -16,21 +16,22 @@ class TaskResponse(BaseModel):
     prompt: str
     status: str
     result: str | None
+    error: str | None = None
     budget_cad: float
     spent_cad: float
     input_tokens: int
     output_tokens: int
     model: str
     created_at: datetime
-    finished_at: datetime | None
+    completed_at: datetime | None = None
 
 
 class TaskLog(BaseModel):
     id: int
     task_id: UUID
-    log_type: str
-    content: str
-    created_at: datetime
+    type: str
+    data: str
+    timestamp: datetime
 
 
 class WSMessage(BaseModel):
